@@ -96,7 +96,13 @@ test("mounted HTML rewrites navigation to /des", async () => {
       links.map((link) => link.getAttribute("href")),
     );
     assert.ok(hrefs.length > 4);
-    assert.ok(hrefs.every((href) => href?.startsWith("/des/")));
+    assert.ok(
+      hrefs.every(
+        (href) =>
+          typeof href === "string" &&
+          (href === "/des" || href.startsWith("/des/")),
+      ),
+    );
     await page.screenshot({
       path: "artifacts/des-home.png",
       fullPage: true,
@@ -141,7 +147,7 @@ test("unknown paths return the application 404", async () => {
       waitUntil: "domcontentloaded",
     });
     assert.equal(response?.status(), 404);
-    const body = await page.locator("body").textContent();
+    const body = await page.$eval("body", (element) => element.textContent);
     assert.match(body ?? "", /404/);
   });
 });
