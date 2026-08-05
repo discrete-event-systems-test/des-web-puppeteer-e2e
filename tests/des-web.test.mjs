@@ -57,13 +57,12 @@ test("liveness and readiness publish explicit JSON contracts", async () => {
   assert.equal(readyResponse.status, readiness.ready ? 200 : 503);
 });
 
-test("server-owned pages render in Chromium", async (t) => {
+test("shared-layout pages render in Chromium", async (t) => {
   const pages = [
     ["/", /Discrete-event sims & games/i],
     ["/models", /Models/i],
     ["/games/soccer", /Soccer/i],
     ["/games/elevator", /Elevator/i],
-    ["/tools/routing", /Routing/i],
   ];
 
   for (const [path, headingPattern] of pages) {
@@ -87,6 +86,26 @@ test("server-owned pages render in Chromium", async (t) => {
       });
     });
   }
+});
+
+test("routing tool renders its self-contained solver dashboard", async () => {
+  await withPage(async (page) => {
+    const response = await page.goto(url("/tools/routing"), {
+      waitUntil: "domcontentloaded",
+    });
+    assert.equal(response?.status(), 200);
+    assert.match(await page.title(), /Optimal routing/i);
+    const heading = await page.$eval("h1", (element) =>
+      element.textContent?.trim(),
+    );
+    assert.match(heading ?? "", /optimal routing/i);
+    assert.ok(await page.$("#form"));
+    assert.equal(
+      await page.$eval("#status", (element) => element.textContent?.trim()),
+      "idle",
+    );
+    assert.ok(await page.$("#canvas"));
+  });
 });
 
 test("mounted HTML rewrites navigation to /des", async () => {
@@ -120,8 +139,22 @@ test("service-local partial and catalog API work in degraded mode", async () => 
   const catalogResponse = await fetch(url("/api/v1/catalog"));
   assert.equal(catalogResponse.status, 200);
   const catalog = await catalogResponse.json();
-  assert.ok(Array.isArray(catalog));
-  assert.ok(catalog.length >= 5);
+  assert.deepEqual(
+    {
+      schema: catalog.schema,
+      basePath: catalog.basePath,
+      routing: catalog.pages?.routing,
+      catalogApi: catalog.api?.catalog,
+      application: catalog.ownership?.application,
+    },
+    {
+      schema: "des.route-catalog.v1",
+      basePath: "/des",
+      routing: "/des/tools/routing",
+      catalogApi: "/des/api/v1/catalog",
+      application: "discrete-event-systems/des-web.rs",
+    },
+  );
 });
 
 test("browser response includes hardening headers", async () => {
