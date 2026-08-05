@@ -1,0 +1,13 @@
+{
+  "name": "des-web-puppeteer-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:puppeteer",
+    "test:puppeteer": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "puppeteer": "25.3.0"
+  }
+}
