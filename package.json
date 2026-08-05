@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "npm run test:puppeteer",
-    "test:puppeteer": "node --test tests/*.test.mjs"
+    "test:puppeteer": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "test:gateway": "node --test tests/des-gateway.test.mjs",
+    "test:first-party": "node --test tests/des-web.test.mjs",
+    "test:junit": "node --test --test-concurrency=1 --test-reporter=junit --test-reporter-destination=test-results/junit.xml tests/*.test.mjs",
+    "indie:submit": "node scripts/submit-indie.mjs"
   },
   "devDependencies": {
     "puppeteer": "25.3.0"

@@ -1,18 +1,18 @@
-name: Validate Puppeteer suite
+name: Dispatch to gha-indie-worker
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  validate:
+  dispatch:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      GHA_INDIE_WORKER_URL: ${{ vars.GHA_INDIE_WORKER_URL || 'https://54.91.17.58/builds' }}
+      GHA_INDIE_WORKER_AUTH: ${{ secrets.DES_GATEWAY_AUTH }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -20,7 +20,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - name: Parse every browser and dispatcher module
-        run: find tests scripts -type f -name '*.mjs' -print0 | sort -z | xargs -0 -n1 node --check
+      - run: node scripts/submit-indie.mjs

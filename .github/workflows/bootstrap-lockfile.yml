@@ -1,0 +1,40 @@
+name: Branch Puppeteer evidence
+
+on:
+  push:
+    branches: [agent/des-browser-automation]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-puppeteer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DES_FORCE_FIXTURE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:puppeteer
+      - name: Generate JUnit evidence
+        if: always()
+        run: npm run test:junit || true
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: des-puppeteer-branch-evidence-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 14
