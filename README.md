@@ -1,18 +1,34 @@
-# des-web Puppeteer E2E
+# DES web Puppeteer end-to-end tests
 
-Independent Puppeteer/Chromium browser contracts for [`discrete-event-systems/des-web.rs`](https://github.com/discrete-event-systems/des-web.rs).
+Independent browser, gateway, and compatibility contracts for [`discrete-event-systems/des-web.rs`](https://github.com/discrete-event-systems/des-web.rs).
 
-## Runner lanes
+**Automation contract:** `des-browser-fleet.v1`
 
-- **GitHub Actions** is exposed as a reusable workflow. `des-web.rs` calls it with the product repository's package-authorized `GITHUB_TOKEN`, starts the immutable image, and uploads screenshot/log evidence.
-- **gha-indie-worker** consumes `.github/workflows/gha-indie-worker.yml` at an exact merged commit SHA and maps it to the fixed `puppeteer` profile. The suite defaults to the cluster-local `dd-des-web` service.
+This repository combines two complementary Puppeteer suites:
 
-The implementation is independent of the Playwright repository and uses Node's built-in test runner plus Puppeteer.
+- `tests/des-web.test.mjs` retains the first-party health/readiness, shared-layout, routing-dashboard, htmx partial, mounted-link, hardening-header, and application-404 contracts.
+- `tests/des-gateway.test.mjs` adds independent public-route, catalog-ownership, gateway-boundary, fixture-provenance, and `dd-des-simulator:8099` compatibility-Service coverage.
 
-## Tracking
+Execution lanes:
 
-- Product project: https://github.com/orgs/discrete-event-systems/projects/2
-- Test project: https://github.com/orgs/discrete-event-systems-test/projects/1
-- Linear project: https://linear.app/denman/project/githubcomdiscrete-event-systems-4a3086ae0c45
+- **GitHub Actions** runs both suites against a public, checksum-pinned executable fixture reproduced by the production Dockerfile from source revision `77741ec8b5331617f71416748ef5f06846e43a5d`.
+- **`gha-indie-worker`** first probes the in-cluster canonical and compatibility Services. When its isolated browser sandbox cannot cross the gateway-only NetworkPolicy, each suite runs the same verified fixture rather than weakening production ingress.
 
-`gha-indie-worker` execution is intentionally disabled at the platform level until its repository/profile allowlist and runtime network access are certified; planning remains available.
+The fixture release is [`des-browser-fixture-77741ec8`](https://github.com/discrete-event-systems/des-web.rs/releases/tag/des-browser-fixture-77741ec8), pinned to archive SHA-256:
+
+```text
+1d8fe97fc285055558fd2e723789a82118d998a595b57a6e8581562bfd18befa
+```
+
+For deployed checks, target selection is `DES_BASE_URL`, then `dd-des-web:8130`, then `dd-des-simulator:8099`, then the configured/current public gateway, the prior gateway, and finally the verified fixture.
+
+```bash
+npm ci
+npm run test:puppeteer
+```
+
+Use `DES_FORCE_FIXTURE=1 npm run test:puppeteer` for deterministic fixture-only evidence.
+
+The repository retains screenshots, JUnit XML, target resolution, fixture provenance, and application logs for 14 days. A trusted GitOps dispatcher submits merged immutable revisions to `gha-indie-worker`; a separately labeled Kubernetes browser Job owns the live Service and compatibility-alias canary without broadening DES ingress.
+
+Ownership and rollout policy are documented in the `discrete-event-systems-test/.github` repository and the Linear project `github.com/discrete-event-systems-test`.
