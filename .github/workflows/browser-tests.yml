@@ -1,0 +1,87 @@
+name: Puppeteer browser contracts
+
+on:
+  workflow_call:
+    inputs:
+      suite_ref:
+        description: Exact merged commit SHA of this test repository
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      suite_ref:
+        description: Test repository ref to execute
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: puppeteer-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DES_IMAGE: ghcr.io/discrete-event-systems/des-web.rs:sha-77741ec8b5331617f71416748ef5f06846e43a5d@sha256:c3b32a5ef767bcdba515c8199fce363871ba2916e4c824609a09a37b3adc02e5
+
+jobs:
+  browser-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: discrete-event-systems-test/des-web-puppeteer-e2e
+          ref: ${{ inputs.suite_ref }}
+          persist-credentials: false
+
+      - name: Authenticate to product GHCR package
+        run: echo "${{ github.token }}" | docker login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Start immutable des-web image
+        run: |
+          set -euo pipefail
+          docker pull "$DES_IMAGE"
+          docker run --detach --name des-web-under-test \
+            --publish 8130:8130 \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --env HOST=0.0.0.0 \
+            --env PORT=8130 \
+            --env DES_PUBLIC_PATH_MODE=mounted \
+            "$DES_IMAGE"
+          for _ in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:8130/healthz >/dev/null && exit 0
+            sleep 1
+          done
+          docker logs des-web-under-test
+          exit 1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked Puppeteer and browser
+        run: npm ci
+
+      - name: Run Puppeteer contracts
+        run: DES_BASE_URL=http://127.0.0.1:8130 npm run test:puppeteer
+
+      - name: Capture server logs
+        if: failure()
+        run: docker logs des-web-under-test > artifacts/des-web.log 2>&1 || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: puppeteer-evidence
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop des-web
+        if: always()
+        run: docker rm --force des-web-under-test >/dev/null 2>&1 || true
