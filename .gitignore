@@ -1,3 +1,7 @@
 node_modules/
 artifacts/
 test-results/
+tmp
+temp
+tmp/worktrees
+temp/worktrees
