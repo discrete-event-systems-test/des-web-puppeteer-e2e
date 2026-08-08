@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 35
     env:
       DES_FORCE_FIXTURE: '1'
-      PUPPETEER_CACHE_DIR: ${{ runner.temp }}/puppeteer-cache
+      PUPPETEER_CACHE_DIR: /tmp/des-puppeteer-cache
     steps:
       - name: Check out exact preparation branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
