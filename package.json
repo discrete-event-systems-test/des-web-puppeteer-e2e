@@ -15,6 +15,7 @@
     "indie:submit": "node scripts/submit-indie.mjs"
   },
   "devDependencies": {
-    "puppeteer": "25.3.0"
+    "puppeteer": "25.3.0",
+    "yauzl": "3.4.0"
   }
 }
